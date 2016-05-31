@@ -4,36 +4,51 @@ var jssNested = require('jss-nested')
 var LoaderUtils = require('loader-utils')
 
 
+function normaliseModule(module) {
+
+    return module.hasOwnProperty('default')
+        ? module.default
+        : module
+}
+
+// Assumes functions with the same name are the same to avoid
+// duplicated plugins with different versions. Consumer specified plugins
+// will always override the defaults
+function uniqFunction(arr) {
+
+    var cache = {}
+
+    return arr.filter(function(el) {
+
+        var key = el.name || el.toString().replace(/\s/gm, '')
+
+        return !Boolean(cache[key])
+            ? (cache[key] = true)
+            : false
+    })
+}
+
 module.exports = function(source) {
 
-  console.log('JSS Webpack loader')
-  console.log('this.resource', this.resource)
-  // console.log('this.query', this.query)
+    if (LoaderUtils.parseQuery(this.query).cacheable && this.cacheable) {
+        this.cacheable()
+    }
 
-  var config = LoaderUtils.getLoaderConfig(this, 'jssLoader')
+    var config = LoaderUtils.getLoaderConfig(this, 'jssWebpackLoader')
 
-  console.log('config', config)
+    var plugins = (config.plugins || [])
+        .concat([jssCamelCase, jssNested])
+        .map(normaliseModule)
 
-  var query = LoaderUtils.parseQuery(this.query)
+    var sheet = jss.create()
 
-  if (query.cacheable && this.cacheable) {
-    this.cacheable()
-  }
+    uniqFunction(plugins).forEach(function(plugin) {
+        sheet.use(plugin())
+    })
 
-  var sheet = jss.create()
-  sheet.use(jssCamelCase.default())
-  sheet.use(jssNested.default())
+    var rules = this.exec(source, this.resource)
 
-  var rules = this.exec(source, this.resource)
-
-  // console.log(rules.default)
-
-
-  var out = sheet
-      .createStyleSheet(rules.default, { named: false })
-      .toString()
-
-  console.log('out', out)
-
-  return out
+    return sheet
+        .createStyleSheet(normaliseModule(rules), {named: false})
+        .toString()
 }
