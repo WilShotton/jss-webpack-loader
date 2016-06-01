@@ -60,7 +60,7 @@ export default {
 }
 ```
 
-*Note:* Object keys must follow CSS selector syntax rules
+*Note: Object keys must follow CSS selector syntax rules*
 
 ### Consuming JSS
 ```JavaScript
@@ -78,3 +78,5 @@ export default React.createClass({
 	}
 }
 ```
+
+*Note: Using CSS Modules creates unique class names otherwise a String literal would be fine for the className*
